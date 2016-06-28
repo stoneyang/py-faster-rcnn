@@ -7,11 +7,19 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+# --------------------------------------------------------
+# Edited by Fan Yang at vimicro, 2016-6-28
+# --------------------------------------------------------
+
 """
 Demo script showing detections in sample images.
 
 See README.md for installation instructions before running.
 """
+
+# Added to ...
+import matplotlib
+matplotlib.use('Agg')
 
 import _init_paths
 from fast_rcnn.config import cfg
@@ -21,7 +29,7 @@ from utils.timer import Timer
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-import caffe, os, sys, cv2
+import caffe, os, cv2, sys #
 import argparse
 
 CLASSES = ('__background__',
@@ -44,7 +52,7 @@ def vis_detections(im, class_name, dets, thresh=0.5):
         return
 
     im = im[:, :, (2, 1, 0)]
-    fig, ax = plt.subplots(figsize=(12, 12))
+    # fig, ax = plt.subplots(figsize=(12, 12))  # commented for ...
     ax.imshow(im, aspect='equal')
     for i in inds:
         bbox = dets[i, :4]
@@ -67,9 +75,9 @@ def vis_detections(im, class_name, dets, thresh=0.5):
                   fontsize=14)
     plt.axis('off')
     plt.tight_layout()
-    plt.draw()
+    # plt.draw()
 
-def demo(net, image_name):
+def demo(net, image_name, conf_thresh=0.8, nms_thresh=0.5):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
@@ -85,17 +93,19 @@ def demo(net, image_name):
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
     # Visualize detections for each class
-    CONF_THRESH = 0.8
-    NMS_THRESH = 0.3
+    # CONF_THRESH = 0.8
+    # NMS_THRESH = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
         cls_scores = scores[:, cls_ind]
         dets = np.hstack((cls_boxes,
                           cls_scores[:, np.newaxis])).astype(np.float32)
-        keep = nms(dets, NMS_THRESH)
+        # keep = nms(dets, NMS_THRESH)
+        keep = nms(dets, nms_thresh)
         dets = dets[keep, :]
-        vis_detections(im, cls, dets, thresh=CONF_THRESH)
+        # vis_detections(im, cls, dets, thresh=CONF_THRESH)
+        vis_detections(im, cls, dets, thresh=conf_thresh)
 
 def parse_args():
     """Parse input arguments."""
@@ -107,6 +117,13 @@ def parse_args():
                         action='store_true')
     parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16]',
                         choices=NETS.keys(), default='vgg16')
+						
+    # added to enable commandline input -- below
+    parser.add_argument('--conf_thresh', dest='conf_thresh', help='Confident threshold',
+                        default=0.8, type=float)
+    parser.add_argument('--nms_thresh', dest='nms_thresh', help='NMS threshold',
+                        default=0.3, type=float)
+	# added to enable commandline input -- above
 
     args = parser.parse_args()
 
@@ -141,11 +158,26 @@ if __name__ == '__main__':
     for i in xrange(2):
         _, _= im_detect(net, im)
 
-    im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-                '001763.jpg', '004545.jpg']
+    # original images
+    # im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
+                # '001763.jpg', '004545.jpg']
+    # mud images
+    # im_names = ['dog_in_mud.jpg', 'car_in_mud.jpg', 'Mud_buffalo.jpg',
+                # 'girl_in_mud.jpg']
+    # camouflage images
+	im_names = ['leopard-camouflage.jpg', 'DSC05901.jpg', 'Camouflage.jpg']
+	
+    # conf_thresh = 0.8
+    # nms_thresh = 0.3
+	
+    conf_thresh = args.conf_thresh
+    nms_thresh = args.nms_thresh
     for im_name in im_names:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
         print 'Demo for data/demo/{}'.format(im_name)
-        demo(net, im_name)
+        fig, ax = plt.subplots(figsize=(12, 12))  #
+        demo(net, im_name, conf_thresh, nms_thresh)
+        plt.draw()
+        plt.savefig(im_name+'_'+str(conf_thresh)+'_'+str(nms_thresh)+'.png')
 
-    plt.show()
+    # plt.show()
