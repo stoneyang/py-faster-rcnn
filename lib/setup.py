@@ -12,6 +12,7 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import subprocess
 import numpy as np
+import platform
 
 def find_in_path(name, path):
     "Find a file in a search path"
@@ -35,21 +36,32 @@ def locate_cuda():
     """
 
     # first check if the CUDAHOME env variable is in use
-    if 'CUDAHOME' in os.environ:
-        home = os.environ['CUDAHOME']
-        nvcc = pjoin(home, 'bin', 'nvcc')
+    if platform.system() == 'Windows':
+        if 'CUDA_PATH' in os.environ:
+            home = os.environ['CUDA_PATH']  # for windows
+            nvcc = pjoin(home, 'bin')
+    elif platform.system() == 'Linux':
+        if 'CUDAHOME' in os.environ:
+            home = os.environ['CUDAHOME']
+            nvcc = pjoin(home, 'nvcc')
     else:
         # otherwise, search the PATH for NVCC
         default_path = pjoin(os.sep, 'usr', 'local', 'cuda', 'bin')
         nvcc = find_in_path('nvcc', os.environ['PATH'] + os.pathsep + default_path)
         if nvcc is None:
             raise EnvironmentError('The nvcc binary could not be '
-                'located in your $PATH. Either add it to your path, or set $CUDAHOME')
+                'located in your $PATH. Either add it to your path, or set $CUDA_PATH or $CUDAHOME')
         home = os.path.dirname(os.path.dirname(nvcc))
 
-    cudaconfig = {'home':home, 'nvcc':nvcc,
-                  'include': pjoin(home, 'include'),
-                  'lib64': pjoin(home, 'lib64')}
+    if platform.system() == 'Windows':
+        cudaconfig = {'home':home, 'nvcc':nvcc,
+                      'include': pjoin(home, 'include'),
+                      'lib64': pjoin(home, 'lib')}
+    elif platform.system() == 'Linux':
+        cudaconfig = {'home':home, 'nvcc':nvcc,
+                      'include': pjoin(home, 'include'),
+                      'lib64': pjoin(home, 'lib64')}
+                      
     for k, v in cudaconfig.iteritems():
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
